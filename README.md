@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI CSV Importer — GrowEasy Assignment
 
-## Getting Started
+An AI-powered CSV importer that maps leads from any CSV format (Facebook exports, Google Ads exports, real estate CRM exports, manual spreadsheets, etc.) into GrowEasy's CRM lead schema, using Gemini for intelligent field mapping.
 
-First, run the development server:
+**Position applied for:** Software Developer Intern
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Live links
+
+- **Hosted app:** https://groweasy-csv-importer-drab.vercel.app/
+- **GitHub repo:** https://github.com/rajtkmr2-web/groweasy-csv-importer
+
+## Tech stack
+
+- **Frontend:** Next.js 15 (App Router), TypeScript, Tailwind CSS, PapaParse
+- **Backend:** Next.js API routes (Node.js)
+- **AI:** Google Gemini (`gemini-2.5-flash`) via `@google/genai`
+
+## Setup instructions
+
+1. Clone the repo and install dependencies:
+   ```bash
+   git clone https://github.com/rajtkmr2-web/groweasy-csv-importer.git
+   cd groweasy-csv-importer
+   npm install
+   ```
+
+2. Create a `.env.local` file in the project root with your Gemini API key:
+   ```
+   GEMINI_API_KEY=your_key_here
+   ```
+   Get a key at https://aistudio.google.com/app/apikey
+
+3. Run the dev server:
+   ```bash
+   npm run dev
+   ```
+
+4. Open http://localhost:3000
+
+## How it works
+
+```
+Upload CSV (drag & drop or file picker)
+   ↓
+Parse & preview (scrollable table, sticky header, no AI yet)
+   ↓
+Generate AI Mapping — Gemini maps CSV columns to GrowEasy CRM fields
+   ↓
+Review / edit mapping (dropdowns, fully editable)
+   ↓
+CRM Preview — shows exactly what will be imported, with business rules applied
+   ↓
+Import to CRM — POSTs the transformed records to /api/import
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### CRM fields
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+created_at, name, email, country_code, mobile_without_country_code,
+company, city, state, country, lead_owner, crm_status, crm_note,
+data_source, possession_time, description
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Business rules implemented
 
-## Learn More
+- **`crm_status`** is normalized to one of `GOOD_LEAD_FOLLOW_UP`, `DID_NOT_CONNECT`, `BAD_LEAD`, `SALE_DONE` based on free-text status/stage values, or left blank if nothing matches confidently.
+- **`data_source`** is normalized to one of `leads_on_demand`, `meridian_tower`, `eden_park`, `varah_swamy`, `sarjapur_plots`, or left blank.
+- **Multiple emails or phone numbers** in a single cell: the first is used as the primary value, and any additional ones are appended to `crm_note`.
+- **`created_at`** is validated with `new Date(...)`; if it doesn't parse, the field is left blank and the original raw value is preserved in `crm_note` instead of silently corrupting the data.
+- **Records with no email and no phone number are skipped** (not imported), and the skipped count is shown separately from the imported count.
+- **Ambiguous column handling:**
+  - If a CSV has separate "First Name" / "Last Name" columns instead of one "Name" column, they're auto-detected and combined.
+  - If a CSV has a single "Phone" column with an embedded country code (e.g. `+91 9876543210`), the country code is automatically split out into `country_code`.
 
-To learn more about Next.js, take a look at the following resources:
+## Known limitations
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- AI mapping quality depends on Gemini's response; low-confidence fields are flagged "Needs review" in the UI for manual correction.
+- `/api/import` currently logs and echoes back the received records — it doesn't call a real external CRM API, since GrowEasy's actual import endpoint isn't available in this assignment context.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Bonus features implemented
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Drag & drop CSV upload
+- Sticky table header with vertical scroll on CSV preview
+- Editable AI mapping with visual indicators (AI suggested / edited / auto-combined / needs review)
+- Download transformed CSV
+- Loading states + spinners on async actions
+- Toast notifications
+- Responsive layout
+- Step progress indicator across the workflow
